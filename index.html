@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+      <!-- PWA Settings Connection -->
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALL SORT BY KAUSAR AALAM</title>
+    <style>
+        :root {
+            --ball-size: 38px;
+            --tube-height: 175px;
+            --bg-color: #0b0b0f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-color: #0b0b0f;
+        }
+
+        .screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .game-title {
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: #00ffcc;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+
+        .author {
+            font-size: 1.1rem;
+            color: #8a8a98;
+            margin-bottom: 50px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 16px 45px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #0f0f12;
+            background: #00ffcc;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+            transition: transform 0.1s ease;
+        }
+
+        .btn:active { transform: scale(0.95); }
+
+        .mode-container {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: 100%;
+            max-width: 290px;
+        }
+
+        .mode-btn {
+            padding: 16px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #252538;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .mode-btn:active {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.1);
+        }
+
+        .top-bar {
+            width: 100%;
+            padding: 12px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: absolute;
+            top: 0;
+            background: rgba(0, 0, 0, 0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .top-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 6px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 14px;
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .nav-btn.danger { background: #dc3545; border: none; }
+
+        .game-area {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 6px;
+            width: 100%;
+            max-width: 500px;
+            padding: 10px 5px;
+            margin-top: 95px;
+        }
+
+        .tube {
+            width: calc(var(--ball-size) + 8px);
+            height: var(--tube-height);
+            border: 3px solid #4a4a5a;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+            background: rgba(22, 22, 31, 0.6);
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            padding-bottom: 5px;
+            position: relative;
+            cursor: pointer;
+            will-change: transform; 
+        }
+
+        .tube.selected {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.08);
+            transform: translateY(-10px);
+        }
+
+        .ball {
+            width: var(--ball-size);
+            height: var(--ball-size);
+            border-radius: 50%;
+            margin: 1px 0;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.6), inset 5px 5px 10px rgba(255,255,255,0.4);
+            will-change: transform;
+        }
+
+        .small-tubes .tube {
+            --ball-size: 32px;
+            --tube-height: 155px;
+        }
+
+        .red { background-color: #ff3333; }
+        .green { background-color: #00cc44; }
+        .blue { background-color: #0066ff; }
+        .orange { background-color: #ff6600; }
+        .yellow { background-color: #ffcc00; }
+        .pink { background-color: #ff55bb; }
+        .cyan { background-color: #00cccc; }
+        .purple { background-color: #b300b3; }
+
+        .win-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .win-overlay.active { display: flex; }
+
+        .win-box {
+            background: #16161f;
+            border: 2px solid #00ffcc;
+            border-radius: 24px;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.2);
+            max-width: 85%;
+            width: 310px;
+        }
+
+        .win-title {
+            font-size: 2.2rem;
+            color: #00ffcc;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .win-text {
+            font-size: 1.1rem;
+            color: #bbbbcc;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="home-screen" class="screen active">
+        <div class="game-title">BALL SORT</div>
+        <div class="author">made by KAUSAR AALAM</div>
+        <button class="btn" onclick="startAudioAndNextScreen('mode-screen')">START</button>
+    </div>
+
+    <div id="mode-screen" class="screen">
+        <h2 style="font-size: 1.8rem; margin-bottom: 35px; letter-spacing: 1px;">SELECT MODE</h2>
+        <div class="mode-container">
+            <button class="mode-btn" onclick="startMode(4)">4 x 4 Mode</button>
+            <button class="mode-btn" onclick="startMode(5)">5 x 5 Mode (2 Empty)</button>
+            <button class="mode-btn" onclick="startMode(6)">6 x 6 Mode (2 Empty)</button>
+        </div>
+        <button class="nav-btn" style="margin-top: 40px; width: 100px;" onclick="changeScreen('home-screen')">Back</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="top-bar">
+            <div class="top-row">
+                <button class="nav-btn danger" onclick="changeScreen('mode-screen')">🏠 Home</button>
+                <div id="mode-title" style="font-weight: bold; font-size: 1.1rem; color: #00ffcc;">Mode</div>
+                <button class="nav-btn" onclick="restartCurrentGame()">Reset</button>
+            </div>
+            <div class="stats-row">
+                <div id="level-title" style="color: #ffffff;">Level: 1/50</div>
+                <div id="moves-title" style="color: #ffcc00;">Moves: 0</div>
+            </div>
+        </div>
+        <div class="game-area" id="game-area"></div>
+    </div>
+
+    <div id="win-popup" class="win-overlay">
+        <div class="win-box">
+            <div class="win-title" id="win-popup-title">JEET GAYE! 🎉</div>
+            <div class="win-text" id="win-popup-text">Badhai Ho KAUSAR AALAM!</div>
+            <button class="btn" id="win-popup-btn" onclick="closeWinPopup()">Next Level</button>
+        </div>
+    </div>
+
+    <script>
+        // === MATRIX RAIN ENGINE ===
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let columns = 0, drops = [];
+        const fontSize = 16;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            columns = Math.floor(canvas.width / fontSize) + 1;
+            drops = [];
+            for (let x = 0; x < columns; x++) drops[x] = Math.random() * -100;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawMatrixRain() {
+            ctx.fillStyle = 'rgba(11, 11, 15, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.08)';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = "."; 
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+                ctx.fillText(text, x, y);
+                if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i] += 1.5;
+            }
+            requestAnimationFrame(drawMatrixRain);
+        }
+        requestAnimationFrame(drawMatrixRain);
+
+        // === GAME PARAMETERS WITH LOCALSTORAGE & MOVE COUNTER ===
+        let audioCtx = null;
+        const colorPalette = ['red', 'green', 'blue', 'orange', 'yellow', 'pink', 'cyan', 'purple'];
+        let currentMode = 4;
+        let currentLevel = 1;
+        let movesCount = 0; // MOVE COUNTER VARIABLE
+        const maxLevels = 50; 
+        let tubesData = [];
+        let selectedTubeIdx = null;
+
+        function startAudioAndNextScreen(nextScreen) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            playSound('select');
+            changeScreen(nextScreen);
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'select') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+            } else if (type === 'move') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(350, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(550, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'win') {
+                const now = audioCtx.currentTime;
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            }
+        }
+
+        function changeScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startMode(mode) {
+            currentMode = mode;
+            
+            // LocalStorage se level check karna
+            const savedLevel = localStorage.getItem(`ballSort_mode_${mode}`);
+            if (savedLevel) {
+                currentLevel = parseInt(savedLevel);
+            } else {
+                currentLevel = 1;
+            }
+            
+            initGame();
+        }
+
+        function initGame() {
+            selectedTubeIdx = null;
+            movesCount = 0; // Reset moves on new level
+            
+            document.getElementById('mode-title').innerText = `${currentMode}x${currentMode}`;
+            document.getElementById('level-title').innerText = `Level: ${currentLevel}/${maxLevels}`;
+            document.getElementById('moves-title').innerText = `Moves: ${movesCount}`;
+            
+            const gameArea = document.getElementById('game-area');
+            if (currentMode >= 6) {
+                gameArea.classList.add('small-tubes');
+            } else {
+                gameArea.classList.remove('small-tubes');
+            }
+            
+            let totalColors = currentMode; 
+            let emptyTubesCount = (currentMode === 4) ? 1 : 2;
+
+            let pool = [];
+            for (let i = 0; i < totalColors; i++) {
+                for (let j = 0; j < 4; j++) { 
+                    pool.push(colorPalette[i]);
+                }
+            }
+
+            let shuffleIntensity = 10 + (currentLevel * 4); 
+            for (let i = 0; i < shuffleIntensity; i++) {
+                const idxA = Math.floor(Math.random() * pool.length);
+                const idxB = Math.floor(Math.random() * pool.length);
+                const temp = pool[idxA];
+                pool[idxA] = pool[idxB];
+                pool[idxB] = temp;
+            }
+
+            tubesData = [];
+            for (let i = 0; i < totalColors; i++) {
+                let tube = [];
+                for (let j = 0; j < 4; j++) {
+                    tube.push(pool.pop());
+                }
+                tubesData.push(tube);
+            }
+            
+            for (let e = 0; e < emptyTubesCount; e++) {
+                tubesData.push([]);
+            }
+
+            changeScreen('game-screen');
+            renderTubes();
+        }
+
+        function restartCurrentGame() {
+            initGame();
+        }
+
+        function renderTubes() {
+            const area = document.getElementById('game-area');
+            area.innerHTML = '';
+
+            tubesData.forEach((tube, idx) => {
+                const tubeDiv = document.createElement('div');
+                tubeDiv.className = 'tube';
+                if (idx === selectedTubeIdx) tubeDiv.classList.add('selected');
+                tubeDiv.onclick = () => handleTubeClick(idx);
+
+                tube.forEach(color => {
+                    const ballDiv = document.createElement('div');
+                    ballDiv.className = `ball ${color}`;
+                    tubeDiv.appendChild(ballDiv);
+                });
+                area.appendChild(tubeDiv);
+            });
+        }
+
+        function handleTubeClick(idx) {
+            if (selectedTubeIdx === null) {
+                if (tubesData[idx].length > 0) {
+                    selectedTubeIdx = idx;
+                    playSound('select');
+                }
+            } else {
+                if (selectedTubeIdx === idx) {
+                    selectedTubeIdx = null;
+                } else {
+                    const sourceTube = tubesData[selectedTubeIdx];
+                    const destTube = tubesData[idx];
+
+                    if (destTube.length < 4) {
+                        const ballToMove = sourceTube[sourceTube.length - 1];
+                        const destTopBall = destTube[destTube.length - 1];
+
+                        if (destTube.length === 0 || destTopBall === ballToMove) {
+                            destTube.push(sourceTube.pop());
+                            playSound('move');
+                            
+                            // Valid Move count badhana
+                            movesCount++;
+                            document.getElementById('moves-title').innerText = `Moves: ${movesCount}`;
+                            
+                            selectedTubeIdx = null;
+                            checkWinCondition();
+                        } else {
+                            if (destTube.length > 0) {
+                                selectedTubeIdx = idx;
+                                playSound('select');
+                            } else {
+                                selectedTubeIdx = null;
+                            }
+                        }
+                    } else {
+                        selectedTubeIdx = idx;
+                        playSound('select');
+                    }
+                }
+            }
+            renderTubes();
+        }
+
+        function checkWinCondition() {
+            let win = true;
+            for (let i = 0; i < tubesData.length; i++) {
+                const tube = tubesData[i];
+                if (tube.length === 0) continue; 
+                if (tube.length !== 4) {
+                    win = false;
+                    break;
+                }
+                const firstColor = tube[0];
+                const allMatch = tube.every(color => color === firstColor);
+                if (!allMatch) {
+                    win = false;
+                    break;
+                }
+            }
+
+            if (win) {
+                setTimeout(() => {
+                    playSound('win');
+                    setupWinPopupContent();
+                    document.getElementById('win-popup').classList.add('active');
+                }, 150);
+            }
+        }
+
+        function setupWinPopupContent() {
+            const title = document.getElementById('win-popup-title');
+            const text = document.getElementById('win-popup-text');
+            const btn = document.getElementById('win-popup-btn');
+
+            if (currentLevel < maxLevels) {
+                title.innerText = `LEVEL ${currentLevel} CLEAR! 🎉`;
+                text.innerHTML = `Badhai Ho KAUSAR AALAM!<br>Aapne ise total <b>${movesCount}</b> moves me solve kiya.<br><br>Aap level ${currentLevel + 1} ke liye taiyar hain.`;
+                btn.innerText = "Next Level";
+            } else {
+                title.innerText = `👑 GOD MODE UNLOCKED! 👑`;
+                text.innerHTML = `Unbelievable KAUSAR AALAM!<br>Aapne saare 50 levels khatam kar diye hain!`;
+                btn.innerText = "Main Menu";
+            }
+        }
+
+        function closeWinPopup() {
+            document.getElementById('win-popup').classList.remove('active');
+            if (currentLevel < maxLevels) {
+                currentLevel++;
+                
+                // Agla level browser me save karna
+                localStorage.setItem(`ballSort_mode_${currentMode}`, currentLevel);
+                
+                initGame();
+            } else {
+                changeScreen('mode-screen');
+            }
+        }
+    </script>
+</body>
+  </html>
+  
